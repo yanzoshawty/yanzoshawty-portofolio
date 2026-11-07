@@ -1,6 +1,7 @@
 const root = document.documentElement;
 const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const darkQuery = matchMedia('(prefers-color-scheme: dark)');
+const motion = !reduceMotion && 'gsap' in window;
 
 /* ---------- theme ---------- */
 
@@ -27,179 +28,174 @@ darkQuery.addEventListener('change', () => {
 });
 paintToggle();
 
-/* ---------- ASCII renderer ---------- */
+/* ---------- smooth scroll (Lenis) ---------- */
 
-// Ramp from empty to dense. The picture is redrawn from these characters on a canvas.
-const RAMP = ' .:-=+*#%@';
-const NOISE = '/\\|<>+*=-_:;01';
+let lenis = null;
+if (motion && 'Lenis' in window) {
+  gsap.registerPlugin(ScrollTrigger);
+  lenis = new Lenis({ lerp: 0.1 });
+  lenis.on('scroll', ScrollTrigger.update);
+  gsap.ticker.add((t) => lenis.raf(t * 1000));
+  gsap.ticker.lagSmoothing(0);
+}
+
+// Hash links: smooth-scroll with Lenis, then move focus so keyboard users land in the section.
+document.addEventListener('click', (e) => {
+  const a = e.target.closest('a[href^="#"]');
+  if (!a) return;
+  const id = a.getAttribute('href');
+  const target = id === '#top' ? document.body : document.querySelector(id);
+  if (!target) return;
+  e.preventDefault();
+  if (lenis) lenis.scrollTo(id === '#top' ? 0 : target, { duration: 1.2 });
+  else target.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth' });
+  if (!target.hasAttribute('tabindex')) target.setAttribute('tabindex', '-1');
+  target.focus({ preventScroll: true });
+  history.pushState(null, '', id);
+});
+
+/* ---------- ASCII background field ---------- */
+
+// The whole page sits on a living field of characters: interference waves form bands and
+// contour lines, the field thickens around the artwork, ripples under the cursor, and
+// speeds up with scroll velocity.
+const RAMP = ' .,:;-=+*#%@';
 const FONT = '"IBM Plex Mono", ui-monospace, monospace';
 
-function asciiArt(fig, startHidden) {
-  const img = fig.querySelector('img');
-  const cv = fig.querySelector('canvas');
+function asciiField(cv) {
   const ctx = cv.getContext('2d');
-  const sampler = document.createElement('canvas').getContext('2d', { willReadFrequently: true });
-  const maxCols = Number(fig.dataset.cols) || 96;
-  // data-crop="x y w h" as fractions of the image; default is the whole picture.
-  const [cx, cy, cwF, chF] = (fig.dataset.crop || '0 0 1 1').split(' ').map(Number);
+  const CW = 10, LH = 18;
+  const s = { cols: 0, rows: 0, lo: '', hi: '', acc: '', mx: -999, my: -999, heat: 0, phase: 0, last: 0 };
+  const spots = [...document.querySelectorAll('[data-hotspot]')];
 
-  const s = {
-    cols: 0, rows: 0, cw: 0, lh: 0, w: 0, h: 0,
-    cells: null, accent: null, seed: null,
-    ink: '', muted: '', hot: '',
-    reveal: startHidden ? 0 : 1,
-    px: -999, py: -999, inside: false, heat: 0, raf: 0,
-  };
-
-  function build() {
-    const w = fig.clientWidth;
-    if (!w || !img.naturalWidth) return;
-    const cols = Math.max(32, Math.min(maxCols, Math.floor(w / 4.6)));
-    const cw = w / cols;
-    const fs = cw / 0.6; // monospace advance is ~0.6em
-    const lh = fs * 1.08;
-    const srcW = img.naturalWidth * cwF, srcH = img.naturalHeight * chF;
-    const rows = Math.round((cols * srcH / srcW) * (cw / lh));
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
-
-    Object.assign(s, { cols, rows, cw, lh, w, h: rows * lh });
-    cv.width = Math.round(w * dpr);
-    cv.height = Math.round(s.h * dpr);
-    cv.style.height = `${s.h}px`;
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    ctx.font = `500 ${fs}px ${FONT}`;
-    ctx.textBaseline = 'top';
-
-    sampler.canvas.width = cols;
-    sampler.canvas.height = rows;
-    sampler.clearRect(0, 0, cols, rows);
-    sampler.drawImage(img, img.naturalWidth * cx, img.naturalHeight * cy, srcW, srcH, 0, 0, cols, rows);
-    const px = sampler.getImageData(0, 0, cols, rows).data;
-
+  function colors() {
     const css = getComputedStyle(root);
-    const dark = css.getPropertyValue('--scheme').trim() === 'dark';
-    s.ink = css.getPropertyValue('--ink').trim();
-    s.muted = css.getPropertyValue('--muted').trim();
-    s.hot = css.getPropertyValue('--accent').trim();
-
-    const n = cols * rows;
-    s.cells = new Int8Array(n);
-    s.accent = new Uint8Array(n);
-    if (!s.seed || s.seed.length !== n) s.seed = Float32Array.from({ length: n }, Math.random);
-
-    // Histogram-equalize the opaque pixels: the art is mostly black jacket and hair, so a plain
-    // luminance ramp spends almost every glyph on one shade and the face loses its features.
-    const lums = new Uint8Array(n);
-    const hist = new Float32Array(256);
-    let opaque = 0;
-    for (let i = 0; i < n; i++) {
-      if (px[i * 4 + 3] < 31) continue;
-      const l = (0.2126 * px[i * 4] + 0.7152 * px[i * 4 + 1] + 0.0722 * px[i * 4 + 2]) | 0;
-      lums[i] = l; hist[l]++; opaque++;
-    }
-    for (let l = 1; l < 256; l++) hist[l] += hist[l - 1];
-    for (let l = 0; l < 256; l++) hist[l] /= opaque || 1;
-
-    for (let i = 0; i < n; i++) {
-      const r = px[i * 4], g = px[i * 4 + 1], b = px[i * 4 + 2], a = px[i * 4 + 3] / 255;
-      if (a < 0.12) { s.cells[i] = -1; continue; }
-      const lum = hist[lums[i]];
-      // Dense glyphs mean "contrast with the page": bright pixels on dark, dark pixels on light.
-      // The floor keeps black hair and jacket readable as a silhouette instead of vanishing.
-      const v = dark ? lum : 1 - lum;
-      s.cells[i] = Math.max(1, Math.round(a * (0.22 + 0.78 * v) * (RAMP.length - 1)));
-      // The brand's light-blue collar keeps its color; everything else is ink.
-      s.accent[i] = b > 140 && g > 110 && b - r > 70 ? 1 : 0;
-    }
-    draw();
+    s.lo = css.getPropertyValue('--field-lo').trim();
+    s.hi = css.getPropertyValue('--field-hi').trim();
+    s.acc = css.getPropertyValue('--field-acc').trim();
   }
 
-  function draw() {
-    const { cols, rows, cw, lh, cells, accent, seed, reveal } = s;
-    if (!cells) return;
-    ctx.clearRect(0, 0, s.w, s.h);
-    const tick = (performance.now() / 60) | 0;
-    const radius = 7 * s.heat;
-    const r2 = radius * radius;
-    let color = '';
+  function resize() {
+    const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+    const w = innerWidth, h = innerHeight;
+    s.cols = Math.ceil(w / CW);
+    s.rows = Math.ceil(h / LH);
+    cv.width = Math.round(w * dpr);
+    cv.height = Math.round(h * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.font = `400 ${CW / 0.6}px ${FONT}`;
+    ctx.textBaseline = 'top';
+    colors();
+    draw(s.last);
+  }
 
+  function draw(now) {
+    const T = now / 1000 * 0.35 + s.phase;
+    const { cols, rows } = s;
+    ctx.clearRect(0, 0, cols * CW, rows * LH);
+
+    // Hotspots as ellipses in cell space, read once per frame (two elements, cheap).
+    const holes = [];
+    for (const el of spots) {
+      const r = el.getBoundingClientRect();
+      if (r.bottom < -200 || r.top > innerHeight + 200) continue;
+      holes.push({ x: (r.left + r.width / 2) / CW, y: (r.top + r.height / 2) / LH, rx: r.width / CW * 0.75, ry: r.height / LH * 0.7 });
+    }
+
+    let color = '';
     for (let y = 0; y < rows; y++) {
       for (let x = 0; x < cols; x++) {
-        const i = y * cols + x;
-        const k = cells[i];
-        if (k < 0) continue;
+        let v = (Math.sin(x * 0.07 + T) + Math.sin(y * 0.19 - T * 0.8)
+          + Math.sin((x * 0.4 + y) * 0.09 + T * 0.6) + Math.sin(Math.hypot(x - cols * 0.7, (y - rows * 0.3) * 2) * 0.12 - T * 1.3) + 4) / 8;
 
-        let ch, c;
-        if (seed[i] > reveal) {
-          // Not resolved yet: a thin band of noise runs ahead of the reveal edge.
-          if (seed[i] > reveal + 0.12) continue;
-          ch = NOISE[(i + tick) % NOISE.length];
-          c = s.muted;
-        } else {
-          const dx = x - s.px, dy = (y - s.py) * (lh / cw);
-          if (r2 > 0 && dx * dx + dy * dy < r2) {
-            ch = NOISE[(i * 7 + tick) % NOISE.length];
-            c = s.hot;
-          } else {
-            ch = RAMP[k];
-            c = accent[i] ? s.hot : s.ink;
-          }
+        let boost = 0;
+        for (const hl of holes) {
+          const dx = (x - hl.x) / hl.rx, dy = (y - hl.y) / hl.ry;
+          boost = Math.max(boost, 1 - Math.sqrt(dx * dx + dy * dy));
+        }
+        if (boost > 0) v += boost * 0.55;
+
+        if (s.heat > 0) {
+          const d = Math.hypot(x - s.mx, (y - s.my) * (LH / CW));
+          if (d < 22) v += s.heat * (Math.sin(d * 0.7 - now / 90) * 0.25 + 0.35) * (1 - d / 22);
+        }
+
+        if (v < 0.42) continue; // blank troughs give the field its bands
+        const band = (v * 7) % 1;
+        let c, ch;
+        if (band > 0.47 && band < 0.53) { c = s.acc; ch = '+'; } // contour lines
+        else {
+          ch = RAMP[Math.min(RAMP.length - 1, ((v - 0.42) * 1.9 * RAMP.length) | 0)];
+          c = boost > 0.15 || v > 0.95 ? s.hi : s.lo;
         }
         if (c !== color) { ctx.fillStyle = c; color = c; }
-        ctx.fillText(ch, x * cw, y * lh);
+        ctx.fillText(ch, x * CW, y * LH);
       }
     }
   }
 
-  // Only animate while something is changing; an idle portrait costs nothing.
-  function loop() {
-    if (!s.inside) s.heat = Math.max(0, s.heat - 0.04);
-    draw();
-    s.raf = s.heat > 0 ? requestAnimationFrame(loop) : 0;
-  }
-  const kick = () => { if (!s.raf) s.raf = requestAnimationFrame(loop); };
-
-  if (!reduceMotion) {
-    fig.addEventListener('pointermove', (e) => {
-      const box = cv.getBoundingClientRect();
-      s.px = (e.clientX - box.left) / s.cw;
-      s.py = (e.clientY - box.top) / s.lh;
-      s.inside = true;
-      s.heat = 1;
-      kick();
-    });
-    fig.addEventListener('pointerleave', () => { s.inside = false; kick(); });
+  function frame(now) {
+    requestAnimationFrame(frame);
+    if (now - s.last < 33) return; // ~30fps is plenty for a background
+    if (lenis) s.phase += Math.min(Math.abs(lenis.velocity), 60) * 0.004;
+    if (s.heat > 0 && !s.inside) s.heat = Math.max(0, s.heat - 0.03);
+    s.last = now;
+    draw(now);
   }
 
-  let lastW = 0;
-  new ResizeObserver(() => {
-    if (fig.clientWidth === lastW) return;
-    lastW = fig.clientWidth;
-    build();
-  }).observe(fig);
-  addEventListener('themechange', build);
-  darkQuery.addEventListener('change', build);
+  addEventListener('resize', resize);
+  addEventListener('themechange', colors);
+  darkQuery.addEventListener('change', colors);
+  document.fonts.load(`400 12px ${FONT}`).catch(() => {}).then(resize);
 
-  const ready = img.complete ? Promise.resolve() : img.decode().catch(() => {});
-  Promise.all([ready, document.fonts.load(`500 12px ${FONT}`).catch(() => {})]).then(() => {
-    if (!img.naturalWidth) return; // image failed: leave the plain <img> visible
-    fig.classList.add('is-live');
-    build();
-  });
-
-  return {
-    state: s,
-    reveal(gsap, duration) {
-      return gsap.to(s, { reveal: 1, duration, ease: 'power2.inOut', onUpdate: draw });
-    },
-  };
+  if (reduceMotion) {
+    // Static field: draw once, redraw only when something forces it.
+    addEventListener('themechange', () => draw(0));
+    darkQuery.addEventListener('change', () => draw(0));
+    return;
+  }
+  addEventListener('pointermove', (e) => {
+    s.mx = e.clientX / CW; s.my = e.clientY / LH; s.heat = 1; s.inside = true;
+  }, { passive: true });
+  document.addEventListener('pointerleave', () => { s.inside = false; });
+  requestAnimationFrame(frame);
 }
 
-const heroArt = document.querySelector('[data-intro-ascii]');
-const aboutArt = document.querySelector('[data-scroll-ascii]');
-const motion = !reduceMotion && 'gsap' in window;
-const hero = heroArt && asciiArt(heroArt, motion);
-const about = aboutArt && asciiArt(aboutArt, motion);
+asciiField(document.querySelector('.field'));
+
+/* ---------- ASCII banners behind section titles ---------- */
+
+// Each word is rasterised once in the display face and re-typed as # with a : drop shadow.
+function renderBanner(pre) {
+  const word = pre.dataset.banner;
+  const rows = 9, S = 8;
+  const c = document.createElement('canvas').getContext('2d', { willReadFrequently: true });
+  const font = `700 ${rows * S * 1.28}px "Martian Mono", monospace`;
+  c.font = font;
+  const cols = Math.ceil((c.measureText(word).width * 2) / S) + 3; // x2: a cell is twice as tall as wide
+  c.canvas.width = cols * S;
+  c.canvas.height = rows * S;
+  c.font = font;
+  c.textBaseline = 'middle';
+  c.setTransform(2, 0, 0, 1, 0, 0);
+  c.fillText(word, S / 2, rows * S * 0.54);
+  const px = c.getImageData(0, 0, cols * S, rows * S).data;
+  const on = (x, y) => x >= 0 && y >= 0 && x < cols && y < rows
+    && px[((y * S + S / 2) * cols * S + x * S + S / 2) * 4 + 3] > 110;
+
+  const lines = [];
+  for (let y = 0; y < rows; y++) {
+    let line = '';
+    for (let x = 0; x < cols; x++) line += on(x, y) ? '#' : on(x - 1, y - 1) ? ':' : ' ';
+    lines.push(line.replace(/\s+$/, ''));
+  }
+  pre.textContent = lines.join('\n');
+}
+
+document.fonts.load('700 40px "Martian Mono"').catch(() => {}).then(() => {
+  document.querySelectorAll('[data-banner]').forEach(renderBanner);
+  if (motion) ScrollTrigger.refresh();
+});
 
 /* ---------- motion ---------- */
 
@@ -209,20 +205,33 @@ if (!motion) {
   gsap.registerPlugin(ScrollTrigger, ScrambleTextPlugin);
   const chars = '/\\|<>+*=-_:01';
 
-  // Load: the name decodes first (it is the focal point), the portrait assembles itself
-  // out of characters next to it, then the supporting copy settles in.
+  // Load: the name decodes first (focal point), the artwork wipes up into place,
+  // then the supporting copy settles in.
   const tl = gsap.timeline({ defaults: { ease: 'power3.out' } });
   tl.to('.hero-name', { duration: 1.2, scrambleText: { text: '{original}', chars, revealDelay: 0.25, speed: 0.5 } }, 0)
     .to('.hero-role', { duration: 0.9, scrambleText: { text: '{original}', chars, speed: 0.6 } }, 0.35)
-    .add(hero.reveal(gsap, 1.8), 0.1)
+    .fromTo('.hero-art img', { clipPath: 'inset(100% 0 0 0)', y: 40 }, { clipPath: 'inset(0% 0 0 0)', y: 0, duration: 1.4, ease: 'expo.out' }, 0.15)
     .fromTo('[data-intro]', { autoAlpha: 0, y: 16 }, { autoAlpha: 1, y: 0, duration: 0.8, stagger: 0.12 }, 0.6)
     .add(() => root.classList.remove('js-motion'));
 
-  // Section titles decode once as they arrive, echoing the hero.
+  // The portrait drifts slower than the page, so it reads as a layer above the field.
+  gsap.to('.hero-art', {
+    yPercent: 14, ease: 'none',
+    scrollTrigger: { trigger: '.hero', start: 'top top', end: 'bottom top', scrub: true },
+  });
+
   gsap.utils.toArray('.section-title').forEach((el) => {
     gsap.to(el, {
       duration: 0.9,
       scrambleText: { text: '{original}', chars, speed: 0.6 },
+      scrollTrigger: { trigger: el, start: 'top 85%', once: true },
+    });
+  });
+
+  // Banners type themselves out left to right in hard steps, like a line printer.
+  gsap.utils.toArray('.banner').forEach((el) => {
+    gsap.fromTo(el, { clipPath: 'inset(0 100% 0 0)' }, {
+      clipPath: 'inset(0 0% 0 0)', duration: 1.1, ease: 'steps(28)',
       scrollTrigger: { trigger: el, start: 'top 85%', once: true },
     });
   });
@@ -234,8 +243,8 @@ if (!motion) {
     });
   });
 
-  ScrollTrigger.create({
-    trigger: aboutArt, start: 'top 80%', once: true,
-    onEnter: () => about.reveal(gsap, 1.4),
+  gsap.from('.about-art img', {
+    y: 80, rotate: -6, autoAlpha: 0, duration: 1.2, ease: 'expo.out',
+    scrollTrigger: { trigger: '.about-art', start: 'top 80%', once: true },
   });
 }

@@ -25,13 +25,16 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Martian+Mono:wdth,wght@75..112.5,400..700&display=swap">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/lenis@1.3.11/dist/lenis.css">
   <link rel="stylesheet" href="style.css">
   <script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/gsap.min.js" defer></script>
   <script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/ScrollTrigger.min.js" defer></script>
   <script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/ScrambleTextPlugin.min.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/lenis@1.3.11/dist/lenis.min.js" defer></script>
   <script src="script.js" defer></script>
 </head>
 <body id="top">
+  <canvas class="field" aria-hidden="true"></canvas>
   <a class="skip" href="#karya">Langsung ke karya</a>
 
   <header class="site-header wrap">
@@ -62,9 +65,8 @@
           <a class="btn" href="#kontak">Cari aku di sosmed</a>
         </div>
       </div>
-      <figure class="ascii hero-art" data-cols="110" data-crop="0.12 0 0.76 0.56" data-intro-ascii>
+      <figure class="hero-art" data-hotspot>
         <img src="img/yanzo-halfbody.webp" width="1100" height="1648" alt="Yanzo Shawty dalam wujud VTuber: rambut hitam dengan garis putih, jaket hitam berkerah biru muda." fetchpriority="high">
-        <canvas aria-hidden="true"></canvas>
       </figure>
     </section>
 
@@ -72,6 +74,7 @@
 
     <section id="karya" class="works" aria-labelledby="karya-title">
       <div class="wrap">
+        <pre class="banner" data-banner="KARYA" aria-hidden="true"></pre>
         <h2 id="karya-title" class="section-title">Yang sudah aku bangun</h2>
         <p class="section-lead">Tiga web, semuanya bisa kamu buka sekarang juga.</p>
       </div>
@@ -154,11 +157,11 @@
     <div class="rule wrap" aria-hidden="true"><span></span></div>
 
     <section id="tentang" class="about wrap" aria-labelledby="tentang-title">
-      <figure class="ascii about-art" data-cols="84" data-scroll-ascii>
+      <figure class="about-art" data-hotspot>
         <img src="img/chibi-mic-hype.webp" width="900" height="701" loading="lazy" alt="Chibi Yanzo bersemangat di depan mikrofon.">
-        <canvas aria-hidden="true"></canvas>
       </figure>
       <div class="about-copy">
+        <pre class="banner" data-banner="TENTANG" aria-hidden="true"></pre>
         <h2 id="tentang-title" class="section-title">Tentang aku</h2>
         <p>Aku Yanzo, programmer sekaligus VTuber dari Indonesia. Di luar ngoding, aku streaming game horor dan survival, kadang cuma ngobrol santai.</p>
         <p>Dua dunia itu sering ketemu di proyekku: lazycustom adalah alat untuk sesama streamer, dan web VTuber-ku jadi rumah buat persona Yanzo.</p>
@@ -170,6 +173,7 @@
     <div class="rule wrap" aria-hidden="true"><span></span></div>
 
     <section id="kontak" class="contact wrap" aria-labelledby="kontak-title">
+      <pre class="banner" data-banner="KONTAK" aria-hidden="true"></pre>
       <h2 id="kontak-title" class="section-title">Temukan aku di sini</h2>
       <p class="section-lead">Semua akun resmi Yanzo Shawty.</p>
       <ul class="socials">
