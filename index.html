@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>yanzoshawty portofolio</title>
+  <meta name="description" content="Portofolio Yanzo Shawty, programmer dari Indonesia. not4recon, lazycustom, dan web VTuber Yanzo Shawty.">
+  <meta name="theme-color" content="#0c0d10" media="(prefers-color-scheme: dark)">
+  <meta name="theme-color" content="#eceef1" media="(prefers-color-scheme: light)">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 22'%3E%3Cpath d='M12 2 22 20H2Z' fill='%230c0d10' stroke='%233ad6ff' stroke-width='2.4' stroke-linejoin='round'/%3E%3C/svg%3E">
+  <meta property="og:title" content="yanzoshawty portofolio">
+  <meta property="og:description" content="Web yang sudah dibangun Yanzo Shawty: alat OSINT, editor chat untuk streamer, dan web VTuber.">
+  <meta property="og:image" content="/img/shot-not4recon.webp">
+  <script>
+    // Runs before paint: restore saved theme, and hide intro elements only when motion is allowed.
+    (function () {
+      var d = document.documentElement;
+      try { var t = localStorage.getItem('theme'); if (t) d.dataset.theme = t; } catch (e) {}
+      if (!matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        d.classList.add('js-motion');
+        setTimeout(function () { d.classList.remove('js-motion'); }, 3000); // failsafe if GSAP never loads
+      }
+    })();
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Martian+Mono:wdth,wght@75..112.5,400..700&display=swap">
+  <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/gsap.min.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/ScrollTrigger.min.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/ScrambleTextPlugin.min.js" defer></script>
+  <script src="script.js" defer></script>
+</head>
+<body id="top">
+  <a class="skip" href="#karya">Langsung ke karya</a>
+
+  <header class="site-header wrap">
+    <a class="brand" href="#top" aria-label="yanzoshawty, kembali ke atas">
+      <svg class="brand-mark" viewBox="0 0 24 22" aria-hidden="true"><path d="M12 2 22 20H2Z" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"/></svg>
+      yanzoshawty
+    </a>
+    <nav aria-label="Navigasi utama">
+      <ul class="nav">
+        <li><a href="#karya">Karya</a></li>
+        <li><a href="#tentang">Tentang</a></li>
+        <li><a href="#kontak">Kontak</a></li>
+      </ul>
+    </nav>
+    <button class="theme-toggle" type="button">tema</button>
+  </header>
+
+  <main>
+    <section class="hero wrap" aria-labelledby="hero-title">
+      <div class="hero-copy">
+        <h1 id="hero-title">
+          <span class="hero-name">Yanzo Shawty</span>
+          <span class="hero-role">programmer</span>
+        </h1>
+        <p class="hero-lead" data-intro>Aku bangun alat OSINT, editor overlay chat buat streamer, dan web untuk persona VTuber-ku. Semuanya live di Vercel.</p>
+        <div class="hero-actions" data-intro>
+          <a class="btn btn-accent" href="#karya">Lihat tiga karyaku</a>
+          <a class="btn" href="#kontak">Cari aku di sosmed</a>
+        </div>
+      </div>
+      <figure class="ascii hero-art" data-cols="110" data-crop="0.12 0 0.76 0.56" data-intro-ascii>
+        <img src="img/yanzo-halfbody.webp" width="1100" height="1648" alt="Yanzo Shawty dalam wujud VTuber: rambut hitam dengan garis putih, jaket hitam berkerah biru muda." fetchpriority="high">
+        <canvas aria-hidden="true"></canvas>
+      </figure>
+    </section>
+
+    <div class="rule wrap" aria-hidden="true"><span></span></div>
+
+    <section id="karya" class="works" aria-labelledby="karya-title">
+      <div class="wrap">
+        <h2 id="karya-title" class="section-title">Yang sudah aku bangun</h2>
+        <p class="section-lead">Tiga web, semuanya bisa kamu buka sekarang juga.</p>
+      </div>
+
+      <article class="work work-flagship wrap reveal" aria-labelledby="w1">
+        <a class="shot" href="https://not4recon-eight.vercel.app/" target="_blank" rel="noopener">
+          <img src="img/shot-not4recon.webp" width="1440" height="900" loading="lazy" alt="Tampilan not4recon: sidebar berisi sebelas modul OSINT dan kolom input WHOIS bergaya terminal hijau.">
+        </a>
+        <div class="work-body">
+          <div class="work-intro">
+            <h3 id="w1" class="work-name">not4recon</h3>
+            <p class="work-pitch">Terminal OSINT yang jalan langsung di browser.</p>
+            <p>Satu tempat untuk mengumpulkan informasi publik tentang domain, IP, email, username, sampai nomor telepon. Tanpa instal apa pun.</p>
+            <p class="note">Dibuat untuk riset dan pengujian yang sudah mendapat izin.</p>
+            <p class="stack"><span>Next.js</span><span>Tailwind CSS</span></p>
+            <div class="work-links">
+              <a class="btn btn-accent" href="https://not4recon-eight.vercel.app/" target="_blank" rel="noopener">Buka not4recon</a>
+              <a class="text-link" href="https://not4recon.vercel.app/" target="_blank" rel="noopener">Versi pertama</a>
+            </div>
+          </div>
+          <div class="modules">
+            <div>
+              <h4>Infrastruktur</h4>
+              <ul class="tree"><li>Domain dan WHOIS via RDAP</li><li>Geolokasi IP, ISP, ASN</li></ul>
+            </div>
+            <div>
+              <h4>Orang dan akun</h4>
+              <ul class="tree"><li>Cari username di 26 platform</li><li>Jejak email di 50 platform</li><li>Cek kebocoran email lewat HIBP</li><li>OSINT dari nama</li><li>Jejak nomor telepon</li><li>YouTube ke email</li></ul>
+            </div>
+            <div>
+              <h4>Pengujian web</h4>
+              <ul class="tree"><li>Google dorking, 120+ query</li><li>Kumpulan payload SQLi</li><li>SQLi URL executor</li></ul>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <article class="work work-split wrap reveal" aria-labelledby="w2">
+        <a class="shot" href="https://lazycustom.vercel.app/" target="_blank" rel="noopener">
+          <img src="img/shot-lazycustom.webp" width="1440" height="900" loading="lazy" alt="Editor lazycustom: daftar template di kiri, preview chat live di tengah, panel pengaturan bubble di kanan.">
+        </a>
+        <div class="work-body">
+          <h3 id="w2" class="work-name">lazycustom</h3>
+          <p class="work-pitch">Editor visual untuk chat live YouTube di OBS.</p>
+          <p>Streamer bisa mendesain tampilan chat tanpa nulis CSS: pilih template, atur bubble di preview, lalu salin CSS-nya ke Browser Source OBS.</p>
+          <ul class="tree facts">
+            <li><strong>16 template</strong> siap pakai, dari Crystal sampai Plain.</li>
+            <li><strong>Preview langsung</strong> dengan pesan member, moderator, owner, Super Chat, membership, dan stiker.</li>
+            <li><strong>Editor bubble</strong>: isi gradient, sudut round, slant, atau chamfer, plus glow, scanlines, dan halftone.</li>
+          </ul>
+          <p class="stack"><span>Next.js</span><span>Tailwind CSS</span></p>
+          <div class="work-links">
+            <a class="btn btn-accent" href="https://lazycustom.vercel.app/" target="_blank" rel="noopener">Buka lazycustom</a>
+          </div>
+        </div>
+      </article>
+
+      <article class="work work-offset wrap reveal" aria-labelledby="w3">
+        <div class="work-body">
+          <h3 id="w3" class="work-name">Web VTuber Yanzo Shawty</h3>
+          <div class="work-cols">
+            <div>
+              <p class="work-pitch">Rumah online untuk persona VTuber-ku.</p>
+              <p>Model Live2D di bagian atas bisa ganti ekspresi dan bereaksi saat dicolek. Ada intro pembuka, galeri art, daftar stream terbaru, dan semua link sosmed.</p>
+            </div>
+            <div>
+              <p class="stack"><span>React</span><span>Vite</span><span>Tailwind CSS</span><span>GSAP</span><span>Live2D Cubism</span></p>
+              <div class="work-links">
+                <a class="btn btn-accent" href="https://yeetpersonalweb.vercel.app/" target="_blank" rel="noopener">Buka web VTuber-ku</a>
+              </div>
+            </div>
+          </div>
+        </div>
+        <a class="shot" href="https://yeetpersonalweb.vercel.app/" target="_blank" rel="noopener">
+          <img src="img/shot-yeetpersonalweb.webp" width="1440" height="900" loading="lazy" alt="Bagian atas web VTuber: tulisan YANZO SHAWTY besar, model Live2D Yanzo, dan tombol ganti ekspresi.">
+        </a>
+      </article>
+    </section>
+
+    <div class="rule wrap" aria-hidden="true"><span></span></div>
+
+    <section id="tentang" class="about wrap" aria-labelledby="tentang-title">
+      <figure class="ascii about-art" data-cols="84" data-scroll-ascii>
+        <img src="img/chibi-mic-hype.webp" width="900" height="701" loading="lazy" alt="Chibi Yanzo bersemangat di depan mikrofon.">
+        <canvas aria-hidden="true"></canvas>
+      </figure>
+      <div class="about-copy">
+        <h2 id="tentang-title" class="section-title">Tentang aku</h2>
+        <p>Aku Yanzo, programmer sekaligus VTuber dari Indonesia. Di luar ngoding, aku streaming game horor dan survival, kadang cuma ngobrol santai.</p>
+        <p>Dua dunia itu sering ketemu di proyekku: lazycustom adalah alat untuk sesama streamer, dan web VTuber-ku jadi rumah buat persona Yanzo.</p>
+        <p class="tools-label">Alat yang aku pakai di proyek-proyek ini</p>
+        <p class="stack"><span>Next.js</span><span>React</span><span>Vite</span><span>Tailwind CSS</span><span>GSAP</span><span>Live2D Cubism</span></p>
+      </div>
+    </section>
+
+    <div class="rule wrap" aria-hidden="true"><span></span></div>
+
+    <section id="kontak" class="contact wrap" aria-labelledby="kontak-title">
+      <h2 id="kontak-title" class="section-title">Temukan aku di sini</h2>
+      <p class="section-lead">Semua akun resmi Yanzo Shawty.</p>
+      <ul class="socials">
+        <li class="social-main"><a href="https://www.youtube.com/@yanzoshawtych" target="_blank" rel="noopener"><span class="platform">YouTube</span><span class="handle">@yanzoshawtych</span><span class="what">Channel utama</span></a></li>
+        <li><a href="https://www.twitch.tv/yanzoshawty" target="_blank" rel="noopener"><span class="platform">Twitch</span><span class="handle">yanzoshawty</span><span class="what">Tempat live</span></a></li>
+        <li><a href="https://www.youtube.com/@Anotheryanzo" target="_blank" rel="noopener"><span class="platform">YouTube kedua</span><span class="handle">@Anotheryanzo</span><span class="what">Arsip VOD dari Twitch</span></a></li>
+        <li><a href="https://x.com/shawty_yanzo" target="_blank" rel="noopener"><span class="platform">X</span><span class="handle">@shawty_yanzo</span></a></li>
+        <li><a href="https://www.instagram.com/yanzoshawty" target="_blank" rel="noopener"><span class="platform">Instagram</span><span class="handle">@yanzoshawty</span></a></li>
+        <li><a href="https://www.tiktok.com/@yanzoshawty" target="_blank" rel="noopener"><span class="platform">TikTok</span><span class="handle">@yanzoshawty</span></a></li>
+        <li><a href="https://trakteer.id/yanzo-shawty" target="_blank" rel="noopener"><span class="platform">Trakteer</span><span class="handle">yanzo-shawty</span><span class="what">Kirim traktiran</span></a></li>
+      </ul>
+    </section>
+  </main>
+
+  <footer class="site-footer wrap">
+    <p>yanzoshawty portofolio, 2026</p>
+    <a class="text-link" href="#top">Kembali ke atas</a>
+  </footer>
+</body>
+</html>
