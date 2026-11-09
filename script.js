@@ -64,8 +64,11 @@ const FONT = '"IBM Plex Mono", ui-monospace, monospace';
 
 function asciiField(cv) {
   const ctx = cv.getContext('2d');
-  const CW = 10, LH = 18;
-  const s = { cols: 0, rows: 0, lo: '', hi: '', acc: '', mx: -999, my: -999, heat: 0, phase: 0, last: 0 };
+  // Small cells: fine enough that the bands and contours read as shapes, not as dots.
+  const CW = 6, LH = 11;
+  const KX = CW / 10, KY = LH / 18; // the wave maths was tuned on 10x18 cells; this keeps the pattern size
+  const RR = 22 * 10 / CW;          // cursor ripple radius in cells (= 220px)
+  const s = { cols: 0, rows: 0, dpr: 1, lo: '', hi: '', acc: '', ready: false, mx: -999, my: -999, heat: 0, phase: 0, last: 0, inside: false };
   const spots = [...document.querySelectorAll('[data-hotspot]')];
 
   function colors() {
@@ -76,20 +79,22 @@ function asciiField(cv) {
   }
 
   function resize() {
-    const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+    s.dpr = Math.min(window.devicePixelRatio || 1, 1.5);
     const w = innerWidth, h = innerHeight;
     s.cols = Math.ceil(w / CW);
     s.rows = Math.ceil(h / LH);
-    cv.width = Math.round(w * dpr);
-    cv.height = Math.round(h * dpr);
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    ctx.font = `400 ${CW / 0.6}px ${FONT}`;
+    cv.width = Math.round(w * s.dpr);
+    cv.height = Math.round(h * s.dpr);
+    ctx.setTransform(s.dpr, 0, 0, s.dpr, 0, 0);
+    ctx.font = `400 ${CW / 0.6}px ${FONT}`; // advance is exactly CW, so a row string lands on the cell grid
     ctx.textBaseline = 'top';
     colors();
+    s.ready = true;
     draw(s.last);
   }
 
   function draw(now) {
+    if (!s.ready) return;
     const T = now / 1000 * 0.35 + s.phase;
     const { cols, rows } = s;
     ctx.clearRect(0, 0, cols * CW, rows * LH);
@@ -102,34 +107,53 @@ function asciiField(cv) {
       holes.push({ x: (r.left + r.width / 2) / CW, y: (r.top + r.height / 2) / LH, rx: r.width / CW * 0.75, ry: r.height / LH * 0.7 });
     }
 
-    let color = '';
+    const sx = new Float32Array(cols);
+    for (let x = 0; x < cols; x++) sx[x] = Math.sin(x * KX * 0.07 + T);
+    const cx = cols * KX * 0.7, cy = rows * KY * 0.3;
+    // One string per color per row, blank elsewhere: ~250 fillText calls a frame instead of ~12k.
+    const lines = [new Array(cols), new Array(cols), new Array(cols)];
+    const used = [0, 0, 0];
+
     for (let y = 0; y < rows; y++) {
+      const yk = y * KY;
+      const sy = Math.sin(yk * 0.19 - T * 0.8);
+      for (let k = 0; k < 3; k++) { lines[k].fill(' '); used[k] = 0; }
       for (let x = 0; x < cols; x++) {
-        let v = (Math.sin(x * 0.07 + T) + Math.sin(y * 0.19 - T * 0.8)
-          + Math.sin((x * 0.4 + y) * 0.09 + T * 0.6) + Math.sin(Math.hypot(x - cols * 0.7, (y - rows * 0.3) * 2) * 0.12 - T * 1.3) + 4) / 8;
+        const xk = x * KX;
+        let v = (sx[x] + sy + Math.sin((xk * 0.4 + yk) * 0.09 + T * 0.6)
+          + Math.sin(Math.hypot(xk - cx, (yk - cy) * 2) * 0.12 - T * 1.3) + 4) / 8;
 
         let boost = 0;
         for (const hl of holes) {
-          const dx = (x - hl.x) / hl.rx, dy = (y - hl.y) / hl.ry;
-          boost = Math.max(boost, 1 - Math.sqrt(dx * dx + dy * dy));
+          const dx = (x - hl.x) / hl.rx;
+          if (dx > 1 || dx < -1) continue;
+          const dy = (y - hl.y) / hl.ry;
+          if (dy > 1 || dy < -1) continue;
+          const b = 1 - Math.sqrt(dx * dx + dy * dy);
+          if (b > boost) boost = b;
         }
         if (boost > 0) v += boost * 0.55;
 
         if (s.heat > 0) {
           const d = Math.hypot(x - s.mx, (y - s.my) * (LH / CW));
-          if (d < 22) v += s.heat * (Math.sin(d * 0.7 - now / 90) * 0.25 + 0.35) * (1 - d / 22);
+          if (d < RR) v += s.heat * (Math.sin(d * 0.7 * CW / 10 - now / 90) * 0.25 + 0.35) * (1 - d / RR);
         }
 
         if (v < 0.42) continue; // blank troughs give the field its bands
-        const band = (v * 7) % 1;
-        let c, ch;
-        if (band > 0.47 && band < 0.53) { c = s.acc; ch = '+'; } // contour lines
+        let row, i;
+        if ((v * 7) % 1 > 0.47 && (v * 7) % 1 < 0.53) { row = 2; i = 7; } // contour lines: '+' in the accent
         else {
-          ch = RAMP[Math.min(RAMP.length - 1, ((v - 0.42) * 1.9 * RAMP.length) | 0)];
-          c = boost > 0.15 || v > 0.95 ? s.hi : s.lo;
+          i = Math.min(RAMP.length - 1, ((v - 0.42) * 1.9 * RAMP.length) | 0);
+          if (i === 0) continue;
+          row = boost > 0.15 || v > 0.95 ? 1 : 0;
         }
-        if (c !== color) { ctx.fillStyle = c; color = c; }
-        ctx.fillText(ch, x * CW, y * LH);
+        lines[row][x] = RAMP[i];
+        used[row]++;
+      }
+      for (let k = 0; k < 3; k++) {
+        if (!used[k]) continue;
+        ctx.fillStyle = k === 0 ? s.lo : k === 1 ? s.hi : s.acc;
+        ctx.fillText(lines[k].join(''), 0, y * LH);
       }
     }
   }
@@ -144,16 +168,11 @@ function asciiField(cv) {
   }
 
   addEventListener('resize', resize);
-  addEventListener('themechange', colors);
-  darkQuery.addEventListener('change', colors);
+  addEventListener('themechange', () => { colors(); draw(s.last); });
+  darkQuery.addEventListener('change', () => { colors(); draw(s.last); });
   document.fonts.load(`400 12px ${FONT}`).catch(() => {}).then(resize);
 
-  if (reduceMotion) {
-    // Static field: draw once, redraw only when something forces it.
-    addEventListener('themechange', () => draw(0));
-    darkQuery.addEventListener('change', () => draw(0));
-    return;
-  }
+  if (reduceMotion) return; // static field: drawn once and on theme change only
   addEventListener('pointermove', (e) => {
     s.mx = e.clientX / CW; s.my = e.clientY / LH; s.heat = 1; s.inside = true;
   }, { passive: true });
@@ -168,7 +187,7 @@ asciiField(document.querySelector('.field'));
 // Each word is rasterised once in the display face and re-typed as # with a : drop shadow.
 function renderBanner(pre) {
   const word = pre.dataset.banner;
-  const rows = 9, S = 8;
+  const rows = innerWidth < 640 ? 8 : 14, S = 8; // finer glyph grid than before; fewer rows keep phones legible
   const c = document.createElement('canvas').getContext('2d', { willReadFrequently: true });
   const font = `700 ${rows * S * 1.28}px "Martian Mono", monospace`;
   c.font = font;
@@ -189,6 +208,7 @@ function renderBanner(pre) {
     for (let x = 0; x < cols; x++) line += on(x, y) ? '#' : on(x - 1, y - 1) ? ':' : ' ';
     lines.push(line.replace(/\s+$/, ''));
   }
+  pre.style.setProperty('--cols', Math.max(...lines.map((l) => l.length)));
   pre.textContent = lines.join('\n');
 }
 
