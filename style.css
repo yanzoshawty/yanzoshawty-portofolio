@@ -177,7 +177,7 @@ strong { font-weight: 500; color: var(--ink); }
 
 /* Giant typed-out word above each section title, never under the text itself. */
 .banner {
-  margin: 0 0 18px -1ch;
+  margin: 0 0 18px;
   /* --cols is set from the rendered banner; the size shrinks so the whole word always fits */
   font: 500 min(9.5px, calc((100vw - 2 * var(--gutter)) / (var(--cols, 120) * 0.6)))/1 var(--font-body);
   color: var(--muted); opacity: .45; white-space: pre; pointer-events: none; user-select: none;
@@ -209,7 +209,8 @@ main p, main li, main h2, main h3, main h4 { text-shadow: 0 0 2px var(--bg), 0 0
 .hero-actions { display: flex; flex-wrap: wrap; gap: 12px 16px; margin-left: -1ch; }
 .hero-actions .btn-accent { margin-left: 1ch; }
 .hero-art { margin: 0; width: min(100%, 440px); justify-self: center; }
-.hero-art img { width: 100%; filter: drop-shadow(0 30px 40px rgb(0 0 0 / .25)); }
+/* The half-body art has a hard bottom edge; fading it lets the figure sink into the field. */
+.hero-art img { width: 100%; filter: drop-shadow(0 30px 40px rgb(0 0 0 / .25)); -webkit-mask-image: linear-gradient(to bottom, #000 80%, transparent); mask-image: linear-gradient(to bottom, #000 80%, transparent); }
 .js-motion .hero-art img { clip-path: inset(100% 0 0 0); }
 
 @media (min-width: 900px) {
@@ -231,11 +232,12 @@ main p, main li, main h2, main h3, main h4 { text-shadow: 0 0 2px var(--bg), 0 0
 
 .work { display: grid; gap: 28px; }
 .work-body { display: grid; gap: 16px; align-content: start; }
-.work-name { font-size: clamp(1.5rem, 3vw, 2.125rem); font-stretch: 100%; letter-spacing: -.02em; }
+.work-name { font-size: clamp(1.5rem, 3vw, 2.125rem); font-stretch: 100%; letter-spacing: -.02em; text-wrap: balance; }
+.nb { white-space: nowrap; }
+.work-offset { gap: 44px; }
 .work-pitch { color: var(--accent); }
 .work-body > p:not(.work-pitch):not(.stack):not(.note),
-.work-intro > p:not(.work-pitch):not(.stack):not(.note),
-.work-cols p:not(.work-pitch):not(.stack) { color: var(--muted); max-width: 60ch; }
+.work-intro > p:not(.work-pitch):not(.stack):not(.note) { color: var(--muted); max-width: 60ch; }
 .work-links { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 20px; margin-top: 4px; }
 .note { font-size: .8125rem; color: var(--muted); }
 .note::before { content: "* "; color: var(--accent); }
@@ -265,12 +267,6 @@ main p, main li, main h2, main h3, main h4 { text-shadow: 0 0 2px var(--bg), 0 0
 
 @media (min-width: 768px) {
   .modules { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-  .work-cols { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 32px; align-items: end; }
-  .work-cols > div { display: grid; gap: 16px; }
-}
-@media (max-width: 767px) {
-  .work-cols { display: grid; gap: 16px; }
-  .work-cols > div { display: grid; gap: 16px; }
 }
 
 @media (min-width: 1000px) {
@@ -299,8 +295,8 @@ main p, main li, main h2, main h3, main h4 { text-shadow: 0 0 2px var(--bg), 0 0
 .about-copy > p:not(.stack):not(.tools-label) { color: var(--muted); max-width: 58ch; }
 .about-art { margin: 0; width: min(100%, 460px); }
 @media (min-width: 900px) {
-  .about { grid-template-columns: minmax(0, .8fr) minmax(0, 1fr); gap: 64px; align-items: center; }
-  .about-copy { order: -1; }
+  .about { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 32px 64px; align-items: center; }
+  .about > .banner { grid-column: 1 / -1; }
   .about-art { justify-self: end; }
 }
 
@@ -334,8 +330,10 @@ main p, main li, main h2, main h3, main h4 { text-shadow: 0 0 2px var(--bg), 0 0
 .site-footer {
   display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px 24px;
   margin-top: clamp(72px, 10vw, 128px); padding-block: 24px 32px;
-  border-top: 1px dashed var(--line); color: var(--muted); font-size: .8125rem;
+  color: var(--muted); font-size: .8125rem;
 }
+/* The rule is drawn inside the gutters so it lines up with the content, not with the padding box. */
+.site-footer::before { content: ""; position: absolute; top: 0; left: var(--gutter); right: var(--gutter); border-top: 1px dashed var(--line); }
 
 /* ---------- easter eggs ---------- */
 

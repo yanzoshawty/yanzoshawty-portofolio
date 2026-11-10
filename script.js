@@ -208,8 +208,11 @@ function renderBanner(pre) {
     for (let x = 0; x < cols; x++) line += on(x, y) ? '#' : on(x - 1, y - 1) ? ':' : ' ';
     lines.push(line.replace(/\s+$/, ''));
   }
-  pre.style.setProperty('--cols', Math.max(...lines.map((l) => l.length)));
-  pre.textContent = lines.join('\n');
+  // Drop the blank columns the glyph side-bearing leaves on the left so the word lines up with its title.
+  const indent = Math.min(...lines.filter((l) => l.trim()).map((l) => l.search(/\S/)));
+  const trimmed = lines.map((l) => l.slice(indent));
+  pre.style.setProperty('--cols', Math.max(...trimmed.map((l) => l.length)));
+  pre.textContent = trimmed.join('\n');
 }
 
 document.fonts.load('700 40px "Martian Mono"').catch(() => {}).then(() => {
