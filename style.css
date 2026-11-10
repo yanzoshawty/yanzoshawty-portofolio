@@ -107,7 +107,8 @@ strong { font-weight: 500; color: var(--ink); }
 .btn:hover::before, .theme-toggle:hover::before { transform: translateX(-4px); }
 .btn:hover::after, .theme-toggle:hover::after { transform: translateX(4px); }
 .btn:hover { color: var(--accent); }
-.btn:active, .theme-toggle:active { transform: translateY(1px); }
+/* `translate` composes with GSAP's inline transform, so the press still shows on magnetic buttons. */
+.btn:active, .theme-toggle:active { translate: 0 1px; }
 
 .btn-accent { background: var(--accent); color: var(--on-accent); }
 .btn-accent:hover { color: var(--on-accent); background: var(--ink); }
@@ -401,5 +402,43 @@ html:root.fsociety {
     0%, 90%, 100% { text-shadow: none; transform: none; }
     92% { text-shadow: -3px 0 #ff3b4e, 3px 0 #3ad6ff; transform: translateX(3px); }
     95% { text-shadow: 3px 0 #ff3b4e, -3px 0 #3ad6ff; transform: translateX(-4px) skewX(-4deg); }
+  }
+}
+
+/* ---------- marquee ---------- */
+
+/* One band of the stack I actually use, between the hero and the work. Decorative: the same
+   list appears as tags on each project, so it is hidden from assistive tech. */
+.marquee {
+  position: relative; z-index: 1; overflow: hidden;
+  margin-block: 24px clamp(56px, 9vw, 112px); padding-block: 18px;
+  background: var(--bg); border-block: 1px dashed var(--line);
+}
+.marquee-track { display: flex; width: max-content; }
+.marquee-set { display: flex; flex: none; margin: 0; padding: 0; list-style: none; }
+.marquee li {
+  display: flex; align-items: center; flex: none;
+  font: 600 clamp(1.25rem, 3.2vw, 2.5rem)/1.2 var(--font-display); font-stretch: 85%; letter-spacing: -.02em; white-space: nowrap;
+}
+.marquee li::after { content: "////"; margin-inline: 2.5ch; font-weight: 400; color: var(--accent); letter-spacing: 0; }
+.marquee li:nth-child(even) { color: transparent; -webkit-text-stroke: 1px var(--muted); }
+/* Without motion there is no loop: show the list once, wrapped. */
+.marquee:not(.is-live) .marquee-track { width: auto; }
+.marquee:not(.is-live) .marquee-set { flex-wrap: wrap; justify-content: center; }
+.marquee:not(.is-live) .marquee-set:not(:first-child) { display: none; }
+
+/* ---------- screenshot hover scan ---------- */
+
+.shot .scan { position: absolute; inset: 10px; overflow: hidden; pointer-events: none; }
+.shot .scan::before {
+  content: ""; position: absolute; left: 0; right: 0; top: 0; height: 28%;
+  background: linear-gradient(to bottom, transparent, var(--accent));
+  border-bottom: 2px solid var(--accent); opacity: 0; transform: translateY(-100%);
+}
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  .shot:hover .scan::before { animation: shot-scan 1s var(--ease) 1; }
+  @keyframes shot-scan {
+    0% { opacity: .5; transform: translateY(-100%); }
+    100% { opacity: 0; transform: translateY(360%); }
   }
 }

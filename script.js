@@ -59,7 +59,14 @@ document.addEventListener('click', (e) => {
 // The whole page sits on a living field of characters: interference waves form bands and
 // contour lines, the field thickens around the artwork, ripples under the cursor, and
 // speeds up with scroll velocity.
-const RAMP = ' .,:;-=+*#%@';
+// Each section gets its own character set (all 12 long, dark to dense), contour glyph, speed and
+// threshold, so the field changes personality as you move down the page.
+const MODES = {
+  hero:    { ramp: ' .,:;-=+*#%@',  acc: '+', speed: 1,   cut: 0.42 },
+  karya:   { ramp: ' .:/|\-<>=#@', acc: '/', speed: 0.7, cut: 0.46 }, // code-like
+  tentang: { ramp: ' .,:;ocO0&8@',  acc: 'o', speed: 0.9, cut: 0.42 }, // rounder shapes
+  kontak:  { ramp: ' .:101010+#@',  acc: '#', speed: 1.3, cut: 0.4 },  // binary
+};
 const FONT = '"IBM Plex Mono", ui-monospace, monospace';
 
 function asciiField(cv) {
@@ -68,7 +75,9 @@ function asciiField(cv) {
   const CW = 6, LH = 11;
   const KX = CW / 10, KY = LH / 18; // the wave maths was tuned on 10x18 cells; this keeps the pattern size
   const RR = 22 * 10 / CW;          // cursor ripple radius in cells (= 220px)
-  const s = { cols: 0, rows: 0, dpr: 1, lo: '', hi: '', acc: '', ready: false, mx: -999, my: -999, heat: 0, phase: 0, last: 0, inside: false };
+  const s = { cols: 0, rows: 0, dpr: 1, lo: '', hi: '', acc: '', ready: false, mx: -999, my: -999, heat: 0, phase: 0, t: 0, last: 0, inside: false,
+    name: 'hero', from: MODES.hero, to: MODES.hero, b: 1, noise: null };
+  const sections = Object.keys(MODES).map((k) => [k, document.querySelector(`[data-field="${k}"]`)]).filter(([, el]) => el);
   const spots = [...document.querySelectorAll('[data-hotspot]')];
 
   function colors() {
@@ -88,6 +97,8 @@ function asciiField(cv) {
     ctx.setTransform(s.dpr, 0, 0, s.dpr, 0, 0);
     ctx.font = `400 ${CW / 0.6}px ${FONT}`; // advance is exactly CW, so a row string lands on the cell grid
     ctx.textBaseline = 'top';
+    // Fixed random threshold per cell: a mode change dissolves cell by cell instead of flipping at once.
+    s.noise = Float32Array.from({ length: s.cols * s.rows }, Math.random);
     colors();
     s.ready = true;
     draw(s.last);
@@ -95,7 +106,9 @@ function asciiField(cv) {
 
   function draw(now) {
     if (!s.ready) return;
-    const T = now / 1000 * 0.35 + s.phase;
+    const T = s.t + s.phase;
+    const { from, to, b: blend } = s;
+    const cut = from.cut + (to.cut - from.cut) * blend;
     const { cols, rows } = s;
     ctx.clearRect(0, 0, cols * CW, rows * LH);
 
@@ -139,15 +152,16 @@ function asciiField(cv) {
           if (d < RR) v += s.heat * (Math.sin(d * 0.7 * CW / 10 - now / 90) * 0.25 + 0.35) * (1 - d / RR);
         }
 
-        if (v < 0.42) continue; // blank troughs give the field its bands
+        if (v < cut) continue; // blank troughs give the field its bands
+        const m = s.noise[y * cols + x] < blend ? to : from;
         let row, i;
-        if ((v * 7) % 1 > 0.47 && (v * 7) % 1 < 0.53) { row = 2; i = 7; } // contour lines: '+' in the accent
+        if ((v * 7) % 1 > 0.47 && (v * 7) % 1 < 0.53) { row = 2; lines[2][x] = m.acc; used[2]++; continue; } // contour lines in the accent
         else {
-          i = Math.min(RAMP.length - 1, ((v - 0.42) * 1.9 * RAMP.length) | 0);
+          i = Math.min(11, ((v - cut) * 1.9 * 12) | 0);
           if (i === 0) continue;
           row = boost > 0.15 || v > 0.95 ? 1 : 0;
         }
-        lines[row][x] = RAMP[i];
+        lines[row][x] = m.ramp[i];
         used[row]++;
       }
       for (let k = 0; k < 3; k++) {
@@ -163,6 +177,14 @@ function asciiField(cv) {
     if (now - s.last < 33) return; // ~30fps is plenty for a background
     if (lenis) s.phase += Math.min(Math.abs(lenis.velocity), 60) * 0.004;
     if (s.heat > 0 && !s.inside) s.heat = Math.max(0, s.heat - 0.03);
+
+    // The section whose top has passed the middle of the screen sets the mode.
+    let name = 'hero';
+    for (const [k, el] of sections) if (el.getBoundingClientRect().top <= innerHeight / 2) name = k;
+    if (name !== s.name) { s.name = name; s.from = s.to; s.to = MODES[name]; s.b = 0; }
+    s.b = Math.min(1, s.b + 0.04);
+    s.t += Math.min(now - (s.prev || now), 100) / 1000 * 0.35 * (s.from.speed + (s.to.speed - s.from.speed) * s.b);
+    s.prev = now;
     s.last = now;
     draw(now);
   }
@@ -226,7 +248,7 @@ if (!motion) {
   root.classList.remove('js-motion');
 } else {
   gsap.registerPlugin(ScrollTrigger, ScrambleTextPlugin);
-  const chars = '/\\|<>+*=-_:01';
+  const chars = '/\\|+*=-_:01'; // no < or >: ScrambleText writes HTML, so those would form entities mid-scramble
 
   // Load: the name decodes first (focal point), the artwork wipes up into place,
   // then the supporting copy settles in.
@@ -270,4 +292,69 @@ if (!motion) {
     y: 80, rotate: -6, autoAlpha: 0, duration: 1.2, ease: 'expo.out',
     scrollTrigger: { trigger: '.about-art', start: 'top 80%', once: true },
   });
+  // Marquee: one endless loop. Scrolling speeds it up, hovering slows it to a crawl.
+  const marquee = document.querySelector('.marquee');
+  if (marquee) {
+    marquee.classList.add('is-live');
+    const loop = gsap.to(marquee.querySelector('.marquee-track'), { xPercent: -100 / 3, ease: 'none', duration: 40, repeat: -1 });
+    let slow = false;
+    marquee.addEventListener('pointerenter', () => { slow = true; });
+    marquee.addEventListener('pointerleave', () => { slow = false; });
+    gsap.ticker.add(() => {
+      const target = slow ? 0.15 : 1 + Math.min(Math.abs(lenis ? lenis.velocity : 0), 40) * 0.3;
+      loop.timeScale(loop.timeScale() + (target - loop.timeScale()) * 0.08);
+    });
+  }
+
+  // Everything below follows a mouse, so it is skipped on touch screens.
+  if (matchMedia('(hover: hover) and (pointer: fine)').matches) {
+    // Nav labels decode again on hover or focus, echoing the title scramble.
+    document.querySelectorAll('.nav a').forEach((a) => {
+      const label = a.textContent;
+      const go = () => gsap.to(a, { duration: 0.45, scrambleText: { text: label, chars, speed: 0.7 }, overwrite: true });
+      a.addEventListener('pointerenter', go);
+      a.addEventListener('focus', go);
+    });
+
+    // Hero portrait: leans toward the pointer in 3D, so it reads as a layer above the field.
+    const hero = document.querySelector('.hero');
+    const img = document.querySelector('.hero-art img');
+    gsap.set(img, { transformPerspective: 900, transformOrigin: '50% 85%' });
+    const hx = gsap.quickTo(img, 'x', { duration: 0.9, ease: 'power3' });
+    const hry = gsap.quickTo(img, 'rotationY', { duration: 0.9, ease: 'power3' });
+    const hrx = gsap.quickTo(img, 'rotationX', { duration: 0.9, ease: 'power3' });
+    hero.addEventListener('pointermove', (e) => {
+      const nx = e.clientX / innerWidth - 0.5, ny = e.clientY / innerHeight - 0.5;
+      hx(nx * -18); hry(nx * 7); hrx(ny * -4);
+    });
+    hero.addEventListener('pointerleave', () => { hx(0); hry(0); hrx(0); });
+
+    // Screenshots: tilt toward the pointer, and a scan line sweeps across as the color comes in.
+    document.querySelectorAll('.shot').forEach((shot) => {
+      const scan = document.createElement('span');
+      scan.className = 'scan';
+      scan.setAttribute('aria-hidden', 'true');
+      shot.append(scan);
+      gsap.set(shot, { transformPerspective: 1100 });
+      const rx = gsap.quickTo(shot, 'rotationX', { duration: 0.6, ease: 'power3' });
+      const ry = gsap.quickTo(shot, 'rotationY', { duration: 0.6, ease: 'power3' });
+      shot.addEventListener('pointermove', (e) => {
+        const r = shot.getBoundingClientRect();
+        ry(((e.clientX - r.left) / r.width - 0.5) * 7);
+        rx(-((e.clientY - r.top) / r.height - 0.5) * 5);
+      });
+      shot.addEventListener('pointerleave', () => { rx(0); ry(0); });
+    });
+
+    // Primary hero button leans toward the pointer.
+    const mag = document.querySelector('.hero-actions .btn-accent');
+    const mx = gsap.quickTo(mag, 'x', { duration: 0.5, ease: 'power3' });
+    const my = gsap.quickTo(mag, 'y', { duration: 0.5, ease: 'power3' });
+    mag.addEventListener('pointermove', (e) => {
+      const r = mag.getBoundingClientRect();
+      mx((e.clientX - (r.left + r.width / 2)) * 0.25);
+      my((e.clientY - (r.top + r.height / 2)) * 0.35);
+    });
+    mag.addEventListener('pointerleave', () => { mx(0); my(0); });
+  }
 }

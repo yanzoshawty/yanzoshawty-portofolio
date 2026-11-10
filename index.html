@@ -10,27 +10,17 @@
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 22'%3E%3Cpath d='M12 2 22 20H2Z' fill='%230c0d10' stroke='%233ad6ff' stroke-width='2.4' stroke-linejoin='round'/%3E%3C/svg%3E">
   <meta property="og:title" content="yanzoshawty portofolio">
   <meta property="og:description" content="Web yang sudah dibangun Yanzo Shawty: alat OSINT, editor chat untuk streamer, dan dua web VTuber.">
-  <meta property="og:image" content="/img/shot-not4recon.webp">
-  <script>
-    // Runs before paint: restore saved theme, and hide intro elements only when motion is allowed.
-    (function () {
-      var d = document.documentElement;
-      try { var t = localStorage.getItem('theme'); if (t) d.dataset.theme = t; } catch (e) {}
-      if (!matchMedia('(prefers-reduced-motion: reduce)').matches) {
-        d.classList.add('js-motion');
-        setTimeout(function () { d.classList.remove('js-motion'); }, 3000); // failsafe if GSAP never loads
-      }
-    })();
-  </script>
+  <meta property="og:image" content="https://yanzoshawty-portofolio.vercel.app/img/shot-not4recon.webp">
+  <script src="boot.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Martian+Mono:wdth,wght@75..112.5,400..700&display=swap">
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/lenis@1.3.11/dist/lenis.css">
+  <link rel="stylesheet" href="vendor/lenis.css">
   <link rel="stylesheet" href="style.css">
-  <script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/gsap.min.js" defer></script>
-  <script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/ScrollTrigger.min.js" defer></script>
-  <script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/ScrambleTextPlugin.min.js" defer></script>
-  <script src="https://cdn.jsdelivr.net/npm/lenis@1.3.11/dist/lenis.min.js" defer></script>
+  <script src="vendor/gsap.min.js" defer></script>
+  <script src="vendor/ScrollTrigger.min.js" defer></script>
+  <script src="vendor/ScrambleTextPlugin.min.js" defer></script>
+  <script src="vendor/lenis.min.js" defer></script>
   <script src="script.js" defer></script>
   <script src="egg.js" defer></script>
 </head>
@@ -55,7 +45,7 @@
   </header>
 
   <main>
-    <section class="hero wrap" aria-labelledby="hero-title">
+    <section class="hero wrap" data-field="hero" aria-labelledby="hero-title">
       <div class="hero-copy">
         <h1 id="hero-title">
           <span class="hero-name">Yanzo Shawty</span>
@@ -72,9 +62,15 @@
       </figure>
     </section>
 
-    <div class="rule wrap" aria-hidden="true"><span></span></div>
+    <div class="marquee" aria-hidden="true">
+      <div class="marquee-track">
+        <ul class="marquee-set"><li>NEXT.JS</li><li>REACT</li><li>VITE</li><li>TAILWIND CSS</li><li>GSAP</li><li>THREE.JS</li><li>LIVE2D CUBISM</li><li>PIXI.JS</li><li>LENIS</li></ul>
+        <ul class="marquee-set"><li>NEXT.JS</li><li>REACT</li><li>VITE</li><li>TAILWIND CSS</li><li>GSAP</li><li>THREE.JS</li><li>LIVE2D CUBISM</li><li>PIXI.JS</li><li>LENIS</li></ul>
+        <ul class="marquee-set"><li>NEXT.JS</li><li>REACT</li><li>VITE</li><li>TAILWIND CSS</li><li>GSAP</li><li>THREE.JS</li><li>LIVE2D CUBISM</li><li>PIXI.JS</li><li>LENIS</li></ul>
+      </div>
+    </div>
 
-    <section id="karya" class="works" aria-labelledby="karya-title">
+    <section id="karya" class="works" data-field="karya" aria-labelledby="karya-title">
       <div class="wrap">
         <pre class="banner" data-banner="KARYA" aria-hidden="true"></pre>
         <h2 id="karya-title" class="section-title">Yang sudah aku bangun</h2>
@@ -172,7 +168,7 @@
 
     <div class="rule wrap" aria-hidden="true"><span></span></div>
 
-    <section id="tentang" class="about wrap" aria-labelledby="tentang-title">
+    <section id="tentang" class="about wrap" data-field="tentang" aria-labelledby="tentang-title">
       <pre class="banner" data-banner="TENTANG" aria-hidden="true"></pre>
       <div class="about-copy">
         <h2 id="tentang-title" class="section-title">Tentang aku</h2>
@@ -188,7 +184,7 @@
 
     <div class="rule wrap" aria-hidden="true"><span></span></div>
 
-    <section id="kontak" class="contact wrap" aria-labelledby="kontak-title">
+    <section id="kontak" class="contact wrap" data-field="kontak" aria-labelledby="kontak-title">
       <pre class="banner" data-banner="KONTAK" aria-hidden="true"></pre>
       <h2 id="kontak-title" class="section-title">Temukan aku di sini</h2>
       <p class="section-lead">Semua akun resmi Yanzo Shawty.</p>
